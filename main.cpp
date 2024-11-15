@@ -78,8 +78,8 @@ void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u
     new_connection.protocol = protocol;
     new_connection.src_port = src_port;
     new_connection.dst_port = dst_port;
-    new_connection.bytes_sent = (src_ip == src_ip) ? ip_len : 0;      // If source matches, count as sent
-    new_connection.bytes_received = (src_ip != src_ip) ? ip_len : 0;  // If source doesn't match, count as received
+    new_connection.bytes_sent = (src_ip == new_connection.src_ip) ? ip_len : 0;      // If source matches, count as sent
+    new_connection.bytes_received = (src_ip != new_connection.src_ip) ? ip_len : 0;  // If source doesn't match, count as received
     new_connection.packets = 1;
     connections.push_back(new_connection);
   } else {
@@ -96,6 +96,20 @@ void sort_connections_by_speed() {
   ranges::sort(connections, [](const Connection &a, const Connection &b) { return (a.bytes_sent + a.bytes_received) > (b.bytes_sent + b.bytes_received); });
 }
 
+string format_speed(double bytes_per_sec) {
+  const char *units[] = {"B/s", "KB/s", "MB/s", "GB/s"};
+  int unit = 0;
+
+  while (bytes_per_sec >= 1024.0 && unit < 3) {
+    bytes_per_sec /= 1024.0;
+    unit++;
+  }
+
+  char buffer[32];
+  snprintf(buffer, sizeof(buffer), "%.1f %s", bytes_per_sec, units[unit]);
+  return string(buffer);
+}
+
 // Function to display connection speeds
 void display_transfer_speeds() {
   static auto last_time = current_time();
@@ -106,15 +120,19 @@ void display_transfer_speeds() {
 
   // Print header
   mvprintw(0, 0, "Network Traffic Monitor");
-  mvprintw(2, 0, "%-15s %-6s  %-15s %-6s  %-4s  %-12s %-12s  %-8s", "Source IP", "Port", "Dest IP", "Port", "Proto", "Send (B/s)", "Recv (B/s)", "Packets");
+  mvprintw(2, 0, "%-15s %-6s  %-15s %-6s  %-4s  %-12s %-12s  %-8s", "Source IP", "Port", "Dest IP", "Port", "Proto", "Send", "Recv", "Packets");
   mvprintw(3, 0, "------------------------------------------------------------------------------------");
 
   int row = 4;
   for (auto &conn : connections) {
     double send_speed = conn.bytes_sent / elapsed_seconds;
     double recv_speed = conn.bytes_received / elapsed_seconds;
-    mvprintw(row, 0, "%-15s %-6d  %-15s %-6d  %-4s  %-12.1f %-12.1f  %-8lu", conn.src_ip.c_str(), conn.src_port, conn.dst_ip.c_str(), conn.dst_port,
-             conn.protocol.c_str(), send_speed, recv_speed, conn.packets);
+
+    string send_formatted = format_speed(send_speed);
+    string recv_formatted = format_speed(recv_speed);
+
+    mvprintw(row, 0, "%-15s %-6d  %-15s %-6d  %-4s  %-12s %-12s  %-8lu", conn.src_ip.c_str(), conn.src_port, conn.dst_ip.c_str(), conn.dst_port,
+             conn.protocol.c_str(), send_formatted.c_str(), recv_formatted.c_str(), conn.packets);
     row++;
   }
 
