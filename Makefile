@@ -2,8 +2,8 @@ CXX = g++
 CXXFLAGS = -std=c++20 -Wall
 LDFLAGS = -lpcap -lncurses
 
-TARGET = isa
-SRCS = main.cpp
+TARGET = isa_top
+SRCS = isa_top.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 all: $(TARGET)
