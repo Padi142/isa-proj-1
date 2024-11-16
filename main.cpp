@@ -132,6 +132,10 @@ void sort_connections_by_speed() {
   ranges::sort(connections, [](const Connection &a, const Connection &b) { return (a.bytes_sent + a.bytes_received) > (b.bytes_sent + b.bytes_received); });
 }
 
+void sort_connections_by_packets() {
+  ranges::sort(connections, [](const Connection &a, const Connection &b) { return a.packets > b.packets; });
+}
+
 string format_speed(double bytes_per_sec) {
   const char *units[] = {"B/s", "KB/s", "MB/s", "GB/s"};
   int unit = 0;
@@ -182,10 +186,14 @@ void display_transfer_speeds() {
   }
 }
 
-[[noreturn]] void display_speeds() {
+[[noreturn]] void display_speeds(char sort_mode) {
   while (true) {
     clear();
-    sort_connections_by_speed();
+    if (sort_mode == 'b') {
+      sort_connections_by_speed();
+    } else if (sort_mode == 'p') {
+      sort_connections_by_packets();
+    }
     display_transfer_speeds();
     refresh();
     connections.clear();  // Reset stats periodically
@@ -193,7 +201,31 @@ void display_transfer_speeds() {
   }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+  char sort_mode = 'b';
+  int interface_index = 0;
+  // Parse command line arguments
+  for (int i = 1; i < argc; i++) {
+    if (std::string(argv[i]) == "-s" && i + 1 < argc) {
+      if (argv[i + 1][0] == 'b' || argv[i + 1][0] == 'p') {
+        sort_mode = argv[i + 1][0];
+      } else {
+        std::cerr << "Invalid sort mode. Use 'b' for bytes or 'p' for packets\n";
+        return 1;
+      }
+      i++;
+    } else if (std::string(argv[i]) == "-i" && i + 1 < argc) {
+      try {
+        interface_index = std::stoi(argv[i + 1]);
+      } catch (const std::exception &) {
+        std::cerr << "Invalid interface index. Please provide a number\n";
+        return 1;
+      }
+      i++;
+    }
+  }
+
+  // Ncurses setup
   initscr();
   noecho();
   curs_set(FALSE);
@@ -202,18 +234,29 @@ int main() {
   pcap_if_t *it = NULL;
 
   if (const int res = pcap_findalldevs(&it, errbuf); res != 0) {
-    fprintf(stderr, "Couldn't find default device: %s\n", errbuf);
-    return (2);
+    fprintf(stderr, "Couldn't find network devices: %s\n", errbuf);
+    return 2;
   }
 
-  pcap_t *handle = pcap_open_live(it[0].name, BUFSIZ, 1, 1000, errbuf);
+  // Find the requested interface
+  pcap_if_t *selected_interface = it;
+  for (int i = 0; i < interface_index && selected_interface != NULL; i++) {
+    selected_interface = selected_interface->next;
+  }
+
+  if (selected_interface == NULL) {
+    fprintf(stderr, "Interface %d is out of range\n", interface_index);
+    return 2;
+  }
+
+  pcap_t *handle = pcap_open_live(selected_interface->name, BUFSIZ, 1, 1000, errbuf);
   if (handle == NULL) {
-    fprintf(stderr, "Couldn't open device %s: %s\n", it[0].name, errbuf);
-    return (2);
+    fprintf(stderr, "Couldn't open device %s: %s\n", selected_interface->name, errbuf);
+    return 2;
   }
 
   std::thread packetThread(read_packets, handle);
-  std::thread speedThread(display_speeds);
+  std::thread speedThread(display_speeds, sort_mode);
 
   packetThread.join();
   speedThread.join();
