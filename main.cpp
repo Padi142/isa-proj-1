@@ -45,7 +45,6 @@ void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u
   switch (ether_type) {
     // IPv4
     case ETHERTYPE_IP: {
-      return;
       const auto *ip_hdr = (struct ip *)(packet + 14);
       char src_str[INET6_ADDRSTRLEN], dst_str[INET6_ADDRSTRLEN];
 
@@ -82,31 +81,33 @@ void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u
     return;
   }
 
-  auto connection = ranges::find_if(
-      connections, [&](const Connection &c) { return (c.src_ip == src_ip && c.dst_ip == dst_ip) || (c.src_ip == dst_ip && c.dst_ip == src_ip); });
+  uint16_t src_port = 0;
+  uint16_t dst_port = 0;
+  auto protocolStr = "Other";
+
+  // Extract ports based on protocol
+  if (protocol == IPPROTO_TCP) {
+    const struct tcphdr *tcp_header = (struct tcphdr *)transport_header;
+    src_port = ntohs(tcp_header->th_sport);
+    dst_port = ntohs(tcp_header->th_dport);
+    protocolStr = "TCP";
+  } else if (protocol == IPPROTO_UDP) {
+    const struct udphdr *udp_header = (struct udphdr *)transport_header;
+    src_port = ntohs(udp_header->uh_sport);
+    dst_port = ntohs(udp_header->uh_dport);
+    protocolStr = "UDP";
+  } else if (protocol == IPPROTO_ICMP) {
+    protocolStr = "ICMP";
+  } else if (protocol == IPPROTO_IGMP) {
+    protocolStr = "IGMP";
+  }
+
+  auto connection = ranges::find_if(connections, [&](const Connection &c) {
+    return (c.src_ip == src_ip && c.dst_ip == dst_ip && c.src_port == src_port && c.dst_port == dst_port)
+           || (c.src_ip == dst_ip && c.dst_ip == src_ip && c.src_port == dst_port && c.dst_port == src_port);
+  });
 
   if (connection == connections.end()) {
-    uint16_t src_port = 0;
-    uint16_t dst_port = 0;
-    auto protocolStr = "Other";
-
-    // Extract ports based on protocol
-    if (protocol == IPPROTO_TCP) {
-      const struct tcphdr *tcp_header = (struct tcphdr *)transport_header;
-      src_port = ntohs(tcp_header->th_sport);
-      dst_port = ntohs(tcp_header->th_dport);
-      protocolStr = "TCP";
-    } else if (protocol == IPPROTO_UDP) {
-      const struct udphdr *udp_header = (struct udphdr *)transport_header;
-      src_port = ntohs(udp_header->uh_sport);
-      dst_port = ntohs(udp_header->uh_dport);
-      protocolStr = "UDP";
-    } else if (protocol == IPPROTO_ICMP) {
-      protocolStr = "ICMP";
-    } else if (protocol == IPPROTO_IGMP) {
-      protocolStr = "IGMP";
-    }
-
     Connection new_connection;
     new_connection.src_ip = src_ip;
     new_connection.dst_ip = dst_ip;
@@ -155,8 +156,8 @@ void display_transfer_speeds() {
 
   // Print header
   mvprintw(0, 0, "Network Traffic Monitor");
-  mvprintw(2, 0, "%-15s %-6s  %-15s %-6s  %-4s  %-12s %-12s  %-8s", "Source IP", "Port", "Dest IP", "Port", "Proto", "Send", "Recv", "Packets");
-  mvprintw(3, 0, "------------------------------------------------------------------------------------");
+  mvprintw(2, 0, "%-39s %-6s  %-39s %-6s  %-4s  %-12s %-12s  %-8s", "Source IP", "Port", "Dest IP", "Port", "Proto", "Send", "Recv", "Packets");
+  mvprintw(3, 0, "----------------------------------------------------------------------------------------------------------------------------------");
 
   int row = 4;
   for (auto &conn : connections) {
@@ -166,13 +167,13 @@ void display_transfer_speeds() {
     string send_formatted = format_speed(send_speed);
     string recv_formatted = format_speed(recv_speed);
 
-    mvprintw(row, 0, "%-15s %-6d  %-15s %-6d  %-4s  %-12s %-12s  %-8lu", conn.src_ip.c_str(), conn.src_port, conn.dst_ip.c_str(), conn.dst_port,
+    mvprintw(row, 0, "%-39s %-6d  %-39s %-6d  %-4s  %-12s %-12s  %-8lu", conn.src_ip.c_str(), conn.src_port, conn.dst_ip.c_str(), conn.dst_port,
              conn.protocol.c_str(), send_formatted.c_str(), recv_formatted.c_str(), conn.packets);
     row++;
   }
 
   // Print footer
-  mvprintw(row + 1, 0, "------------------------------------------------------------------------------------");
+  mvprintw(row + 1, 0, "----------------------------------------------------------------------------------------------------------------------------------");
 }
 
 [[noreturn]] void read_packets(pcap_t *handle) {
