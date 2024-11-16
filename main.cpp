@@ -1,5 +1,8 @@
+#include <arpa/inet.h>
 #include <ncurses.h>
+#include <netinet/ether.h>
 #include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
@@ -31,17 +34,49 @@ time_point<steady_clock> current_time() { return steady_clock::now(); }
 auto connections = vector<Connection>();
 
 void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u_char *packet) {
-  const auto *ip_hdr = (struct ip *)(packet + 14);
+  string src_ip, dst_ip;
   uint16_t ip_len = header->len;
+  const u_char *transport_header;
+  uint8_t protocol;
 
-  // Get transport layer header
-  int ip_header_len = ip_hdr->ip_hl * 4;                         // IP header length in bytes
-  const u_char *transport_header = packet + 14 + ip_header_len;  // 14 bytes for Ethernet header
+  auto *eth_header = (struct ether_header *)packet;
+  uint16_t ether_type = ntohs(eth_header->ether_type);
 
-  const string src_ip = inet_ntoa(ip_hdr->ip_src);
-  const string dst_ip = inet_ntoa(ip_hdr->ip_dst);
+  switch (ether_type) {
+    // IPv4
+    case ETHERTYPE_IP: {
+      return;
+      const auto *ip_hdr = (struct ip *)(packet + 14);
+      char src_str[INET6_ADDRSTRLEN], dst_str[INET6_ADDRSTRLEN];
 
-  const string connection_key = src_ip + "=>" + dst_ip;
+      inet_ntop(AF_INET, &(ip_hdr->ip_src), src_str, INET6_ADDRSTRLEN);
+      inet_ntop(AF_INET, &(ip_hdr->ip_dst), dst_str, INET6_ADDRSTRLEN);
+
+      src_ip = src_str;
+      dst_ip = dst_str;
+      protocol = ip_hdr->ip_p;
+      transport_header = packet + 14 + (ip_hdr->ip_hl * 4);
+      break;
+    }
+
+    // IPv6
+    case ETHERTYPE_IPV6: {
+      const auto *ip6_hdr = (struct ip6_hdr *)(packet + 14);
+      char src_str[INET6_ADDRSTRLEN], dst_str[INET6_ADDRSTRLEN];
+
+      inet_ntop(AF_INET6, &(ip6_hdr->ip6_src), src_str, INET6_ADDRSTRLEN);
+      inet_ntop(AF_INET6, &(ip6_hdr->ip6_dst), dst_str, INET6_ADDRSTRLEN);
+
+      src_ip = src_str;
+      dst_ip = dst_str;
+      protocol = ip6_hdr->ip6_nxt;
+      transport_header = packet + 14 + sizeof(struct ip6_hdr);
+      break;
+    }
+    default: {
+      return;
+    }
+  }
 
   if (src_ip.empty() || dst_ip.empty()) {
     return;
@@ -53,29 +88,29 @@ void packet_handler(u_char *user_data, const struct pcap_pkthdr *header, const u
   if (connection == connections.end()) {
     uint16_t src_port = 0;
     uint16_t dst_port = 0;
-    auto protocol = "Other";
+    auto protocolStr = "Other";
 
     // Extract ports based on protocol
-    if (ip_hdr->ip_p == IPPROTO_TCP) {
+    if (protocol == IPPROTO_TCP) {
       const struct tcphdr *tcp_header = (struct tcphdr *)transport_header;
       src_port = ntohs(tcp_header->th_sport);
       dst_port = ntohs(tcp_header->th_dport);
-      protocol = "TCP";
-    } else if (ip_hdr->ip_p == IPPROTO_UDP) {
+      protocolStr = "TCP";
+    } else if (protocol == IPPROTO_UDP) {
       const struct udphdr *udp_header = (struct udphdr *)transport_header;
       src_port = ntohs(udp_header->uh_sport);
       dst_port = ntohs(udp_header->uh_dport);
-      protocol = "UDP";
-    } else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-      protocol = "ICMP";
-    } else if (ip_hdr->ip_p == IPPROTO_IGMP) {
-      protocol = "IGMP";
+      protocolStr = "UDP";
+    } else if (protocol == IPPROTO_ICMP) {
+      protocolStr = "ICMP";
+    } else if (protocol == IPPROTO_IGMP) {
+      protocolStr = "IGMP";
     }
 
     Connection new_connection;
     new_connection.src_ip = src_ip;
     new_connection.dst_ip = dst_ip;
-    new_connection.protocol = protocol;
+    new_connection.protocol = protocolStr;
     new_connection.src_port = src_port;
     new_connection.dst_port = dst_port;
     new_connection.bytes_sent = (src_ip == new_connection.src_ip) ? ip_len : 0;      // If source matches, count as sent
