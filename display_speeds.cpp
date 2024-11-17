@@ -93,6 +93,7 @@ void display_transfer_speeds() {
       sort_connections_by_packets();
     }
 
+    // Display the speeds
     display_transfer_speeds();
     refresh();
     connections.clear();  // Reset stats periodically

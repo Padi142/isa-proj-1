@@ -49,6 +49,7 @@ int main(int argc, char *argv[]) {
   noecho();
   curs_set(FALSE);
 
+  // Pcap setup
   char errbuf[PCAP_ERRBUF_SIZE];
   pcap_if_t *it = NULL;
 
@@ -73,12 +74,14 @@ int main(int argc, char *argv[]) {
     return 2;
   }
 
+  // Open the selected interface
   pcap_t *handle = pcap_open_live(selected_interface->name, BUFSIZ, 1, 1000, errbuf);
   if (handle == NULL) {
     fprintf(stderr, "Couldn't open device %s: %s\n", selected_interface->name, errbuf);
     return 2;
   }
 
+  // Start threads
   std::thread packetThread(read_packets, handle);
   std::thread speedThread(display_speeds, sort_mode);
 

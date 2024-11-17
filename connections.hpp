@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+// Connection structure
 struct Connection {
   std::string src_ip;
   std::string dst_ip;
@@ -19,6 +20,7 @@ struct Connection {
   uint64_t packets;
 };
 
+// Vector of connections that is used across threads
 inline std::vector<Connection> connections;
 
 #endif
