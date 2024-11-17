@@ -1,3 +1,6 @@
+// Matyáš Krejza
+// xkrejz07
+
 #ifndef READ_PACKETS_HPP
 #define READ_PACKETS_HPP
 

@@ -1,3 +1,6 @@
+// Matyáš Krejza
+// xkrejz07
+
 #include <arpa/inet.h>
 #include <ncurses.h>
 #include <netinet/ether.h>

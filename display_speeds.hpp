@@ -1,3 +1,6 @@
+// Matyáš Krejza
+// xkrejz07
+
 #ifndef DISPLAY_SPEEDS_HPP
 #define DISPLAY_SPEEDS_HPP
 

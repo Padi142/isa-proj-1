@@ -1,4 +1,7 @@
-#include "display_speeds.hpp"  // Your header file
+// Matyáš Krejza
+// xkrejz07
+
+#include "display_speeds.hpp"
 
 #include <ncurses.h>
 

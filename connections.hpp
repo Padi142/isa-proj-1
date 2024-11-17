@@ -1,3 +1,6 @@
+// Matyáš Krejza
+// xkrejz07
+
 #ifndef CONNECTIONS_HPP
 #define CONNECTIONS_HPP
 
