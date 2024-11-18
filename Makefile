@@ -22,6 +22,6 @@ clean:
 	rm -f $(OBJS) $(TARGET)
 
 pack:
-	tar -cf xkrejz07.tar $(SRCS) $(HEADERS) Makefile README.md
+	r -cf xkrejz07.tar ta$(SRCS) $(HEADERS) Makefile manual.pdf isa-top.1 README.md
 
 .PHONY: all clean run

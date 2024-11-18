@@ -44,17 +44,12 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // Ncurses setup
-  initscr();
-  noecho();
-  curs_set(FALSE);
-
   // Pcap setup
   char errbuf[PCAP_ERRBUF_SIZE];
   pcap_if_t *it = NULL;
 
   if (const int res = pcap_findalldevs(&it, errbuf); res != 0) {
-    fprintf(stderr, "Couldn't find network devices: %s\n", errbuf);
+    fprintf(stderr, "Couldn't find devices: %s\n", errbuf);
     return 2;
   }
 
@@ -70,7 +65,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (!interface_found) {
-    fprintf(stderr, "Interface '%s' not found\n", interface_name.c_str());
+    fprintf(stderr, "Interface '%s' not found. Use the correct interface name in the -i parameter\n", interface_name.c_str());
     return 2;
   }
 
@@ -80,6 +75,11 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Couldn't open device %s: %s\n", selected_interface->name, errbuf);
     return 2;
   }
+
+  // Ncurses setup
+  initscr();
+  noecho();
+  curs_set(FALSE);
 
   // Start threads
   std::thread packetThread(read_packets, handle);
