@@ -57,9 +57,9 @@ void display_transfer_speeds() {
   last_time = now;
 
   // Print header
-  mvprintw(0, 0, "Network Traffic Monitor");
-  mvprintw(2, 0, "%-39s %-6s  %-39s %-6s  %-4s  %-12s %-12s  %-8s", "Source IP", "Port", "Dest IP", "Port", "Proto", "Send", "Recv", "Packets");
-  mvprintw(3, 0, "----------------------------------------------------------------------------------------------------------------------------------");
+  mvprintw(0, 0, "Application for obtaining network traffic statistics");
+  mvprintw(2, 0, "%-40s %-6s  %-40s %-6s  %-4s  %-12s %-12s  %-8s", "Source IP", "Port", "Dest IP", "Port", "Proto", "Sent", "Received", "Packets");
+  mvprintw(3, 0, "---------------------------------------------------------------------------------------------------------------------------------------");
 
   int row = 4;
   int index = 0;
@@ -73,14 +73,15 @@ void display_transfer_speeds() {
     string send_formatted = format_speed(send_speed);
     string recv_formatted = format_speed(recv_speed);
 
-    mvprintw(row, 0, "%-39s %-6d  %-39s %-6d  %-4s  %-12s %-12s  %-8lu", conn.src_ip.c_str(), conn.src_port, conn.dst_ip.c_str(), conn.dst_port,
+    mvprintw(row, 0, "%-40s %-6d  %-40s %-6d  %-4s  %-12s %-12s  %-8lu", conn.src_ip.c_str(), conn.src_port, conn.dst_ip.c_str(), conn.dst_port,
              conn.protocol.c_str(), send_formatted.c_str(), recv_formatted.c_str(), conn.packets);
     row++;
     index++;
   }
 
   // Print footer
-  mvprintw(row + 1, 0, "----------------------------------------------------------------------------------------------------------------------------------");
+  mvprintw(row + 1, 0,
+           "---------------------------------------------------------------------------------------------------------------------------------------");
 }
 
 [[noreturn]] void display_speeds(char sort_mode) {

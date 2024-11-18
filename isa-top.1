@@ -1,0 +1,36 @@
+.TH ISA-TOP "application for obtaining network traffic statistics "
+.SH NAME
+isa-top \- Display information about network statistics
+
+.SH USAGE
+.B isa-top
+[\fB-s\fR \fIsort_mode\fR] [\fB-i\fR \fIinterface \fR]
+
+.SH DESCRIPTION
+The goal of the project is to create a tool `isa-top`, which shows transfer speeds for IP addresses communicating on the selected interface. The tools sorts up to 10 of these connections either by the most data being sent or by the most number of packets being sent. 
+
+.SH OPTIONS
+.TP
+.B \-s \fIsort_mode\fR
+Specifies the sorting mode for displaying connections. The options are:
+.RS
+.TP
+.B b
+Sort by bytes sent and received.
+.TP
+.B p
+Sort by the number of packets.
+.RE
+.TP
+.B \-i \fIinterface\fR
+Select the interface the application should be listening on. This option is required
+
+.SH EXAMPLES
+To run the application and sort by bytes:
+.B display_speeds -s b -i eth0
+
+To run the application and sort by packets:
+.B display_speeds -s p -i wlan0
+
+.SH AUTHOR
+Matyáš Krejza <xkrejz07>
